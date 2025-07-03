@@ -219,6 +219,7 @@ class _SecondaryButtonState extends State<SecondaryButton>
 }
 
 class StartedPage extends StatelessWidget {
+  const StartedPage({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(

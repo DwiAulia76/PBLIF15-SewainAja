@@ -49,7 +49,10 @@ class _LoginPageState extends State<LoginPage> {
 
       if (response.statusCode == 200) {
         if (responseBody['status'] == 'success') {
-          _showSuccessDialog('Login Berhasil', 'Selamat datang kembali!');
+          // Navigasi langsung ke halaman home tanpa popup
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
         } else {
           setState(() {
             _loginError =
@@ -57,14 +60,12 @@ class _LoginPageState extends State<LoginPage> {
           });
         }
       } else if (response.statusCode == 403) {
-        // Tangani khusus error 403 (Forbidden) untuk admin
         setState(() {
           _loginError =
               responseBody['message'] ??
               'Role admin tidak diizinkan login melalui aplikasi mobile.';
         });
       } else if (response.statusCode == 401) {
-        // Tangani khusus error 401 (Unauthorized) untuk akun belum terverifikasi
         setState(() {
           _loginError = responseBody['message'] ?? 'Akun belum terverifikasi';
         });
@@ -73,7 +74,7 @@ class _LoginPageState extends State<LoginPage> {
           _loginError = 'Terjadi kesalahan server (${response.statusCode})';
         });
       }
-    } on TimeoutException catch (e) {
+    } on TimeoutException catch (_) {
       setState(() {
         _retryCount++;
         _loginError = 'Waktu koneksi habis. Silakan coba lagi.';
@@ -88,39 +89,10 @@ class _LoginPageState extends State<LoginPage> {
             'Terjadi kesalahan: ${e.toString().replaceAll(RegExp(r'^Exception: '), '')}';
       });
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-  }
-
-  void _showSuccessDialog(String title, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 28),
-            const SizedBox(width: 12),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Navigasi ke halaman utama penyewa
-              Navigator.pushReplacementNamed(context, '/home_penyewa');
-            },
-            child: const Text(
-              'Lanjutkan',
-              style: TextStyle(color: Color(0xFF0052CC)),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   String? _validateEmail(String? value) {
@@ -382,6 +354,35 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 32),
+
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushReplacementNamed(
+                              context,
+                              '/auth/daftar',
+                            );
+                          },
+                          child: RichText(
+                            text: TextSpan(
+                              text: 'Belum memiliki akun? ',
+                              style: TextStyle(
+                                color: Color(0xFF333333).withOpacity(0.8),
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Daftar sekarang',
+                                  style: const TextStyle(
+                                    color: Color(0xFF0052CC),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
 
                       // Support Info
                       Padding(
