@@ -49,7 +49,6 @@ class _LoginPageState extends State<LoginPage> {
 
       if (response.statusCode == 200) {
         if (responseBody['status'] == 'success') {
-          // Navigasi langsung ke halaman home tanpa popup
           if (mounted) {
             Navigator.pushReplacementNamed(context, '/home');
           }
@@ -122,331 +121,348 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Back Button
-            Positioned(
-              top: 16,
-              left: 16,
-              child: IconButton(
-                icon: Icon(Icons.arrow_back, color: Colors.grey[700]),
-                onPressed: () => Navigator.pop(context),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.white, Color(0xFFE3F2FD)],
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              // Tombol back di pojok kiri atas
+              Positioned(
+                top: 16,
+                left: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                  onPressed: () => Navigator.pop(context),
+                ),
               ),
-            ),
 
-            // Main Content
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Logo Section
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0052CC).withOpacity(0.08),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Image.asset(
-                          'assets/logo.png',
-                          height: 80,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Color(0xFF0052CC),
-                              ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Welcome Text
-                      Text(
-                        'Login Penyewa',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0052CC),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Masukkan kredensial Anda',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                      ),
-                      const SizedBox(height: 40),
-
-                      // Error Message
-                      if (_loginError != null)
-                        AnimatedOpacity(
-                          duration: const Duration(milliseconds: 300),
-                          opacity: _loginError != null ? 1 : 0,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            margin: const EdgeInsets.only(bottom: 20),
-                            decoration: BoxDecoration(
-                              color: Colors.red[50],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red[100]!),
-                            ),
-                            child: Row(
-                              children: [
+              // Main Content
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Logo Section
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0052CC).withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Image.asset(
+                            'assets/logo.png',
+                            height: 80,
+                            errorBuilder: (context, error, stackTrace) =>
                                 const Icon(
-                                  Icons.error_outline,
-                                  color: Colors.red,
+                                  Icons.person,
+                                  size: 60,
+                                  color: Color(0xFF0052CC),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _loginError!,
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                      if (_retryCount > 0)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 8,
-                                          ),
-                                          child: Text(
-                                            'Percobaan ke-$_retryCount',
-                                            style: TextStyle(
-                                              color: Colors.red[700],
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    size: 20,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Welcome Text
+                        Text(
+                          'Login Penyewa',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0052CC),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Masukkan kredensial Anda',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+
+                        // Error Message
+                        if (_loginError != null)
+                          AnimatedOpacity(
+                            duration: const Duration(milliseconds: 300),
+                            opacity: _loginError != null ? 1 : 0,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              margin: const EdgeInsets.only(bottom: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.red[100]!),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline,
                                     color: Colors.red,
                                   ),
-                                  onPressed: _clearError,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      // Input Fields Container
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 32,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              spreadRadius: 5,
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            // Email Field
-                            _buildInputField(
-                              controller: _emailController,
-                              label: 'Email Penyewa',
-                              hint: 'penyewa@example.com',
-                              icon: Icons.email_outlined,
-                              validator: _validateEmail,
-                              keyboardType: TextInputType.emailAddress,
-                              onChanged: (_) => _clearError(),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Password Field
-                            _buildPasswordField(),
-                            const SizedBox(height: 12),
-
-                            // Forgot Password
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                        'Hubungi pengelola untuk reset password',
-                                      ),
-                                      backgroundColor: const Color(0xFF0052CC),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _loginError!,
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                        if (_retryCount > 0)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 8,
+                                            ),
+                                            child: Text(
+                                              'Percobaan ke-$_retryCount',
+                                              style: TextStyle(
+                                                color: Colors.red[700],
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
-                                  );
-                                },
-                                child: Text(
-                                  'Lupa Password?',
-                                  style: TextStyle(
-                                    color: const Color(0xFF0052CC),
-                                    fontWeight: FontWeight.w600,
                                   ),
-                                ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      size: 20,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: _clearError,
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 24),
+                          ),
 
-                            // Login Button
-                            SizedBox(
-                              width: double.infinity,
-                              height: 50,
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _login,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0052CC),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 3,
-                                  shadowColor: const Color(
-                                    0xFF0052CC,
-                                  ).withOpacity(0.3),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 3,
+                        // Input Fields Container
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 32,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                spreadRadius: 5,
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // Email Field
+                              _buildInputField(
+                                controller: _emailController,
+                                label: 'Email Penyewa',
+                                hint: 'penyewa@example.com',
+                                icon: Icons.email_outlined,
+                                validator: _validateEmail,
+                                keyboardType: TextInputType.emailAddress,
+                                onChanged: (_) => _clearError(),
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Password Field
+                              _buildPasswordField(),
+                              const SizedBox(height: 12),
+
+                              // Forgot Password
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text(
+                                          'Hubungi pengelola untuk reset password',
                                         ),
-                                      )
-                                    : const Text(
-                                        'LOGIN',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          letterSpacing: 0.5,
+                                        backgroundColor: const Color(
+                                          0xFF0052CC,
+                                        ),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                       ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      Center(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushReplacementNamed(
-                              context,
-                              '/auth/daftar',
-                            );
-                          },
-                          child: RichText(
-                            text: TextSpan(
-                              text: 'Belum memiliki akun? ',
-                              style: TextStyle(
-                                color: Color(0xFF333333).withOpacity(0.8),
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: 'Daftar sekarang',
-                                  style: const TextStyle(
-                                    color: Color(0xFF0052CC),
-                                    fontWeight: FontWeight.bold,
+                                    );
+                                  },
+                                  child: Text(
+                                    'Lupa Password?',
+                                    style: TextStyle(
+                                      color: const Color(0xFF0052CC),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ],
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Login Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _login,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0052CC),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 3,
+                                    shadowColor: const Color(
+                                      0xFF0052CC,
+                                    ).withOpacity(0.3),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 3,
+                                          ),
+                                        )
+                                      : const Text(
+                                          'LOGIN',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        Center(
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/auth/daftar',
+                              );
+                            },
+                            child: RichText(
+                              text: TextSpan(
+                                text: 'Belum memiliki akun? ',
+                                style: TextStyle(
+                                  color: const Color(
+                                    0xFF333333,
+                                  ).withOpacity(0.8),
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: 'Daftar sekarang',
+                                    style: const TextStyle(
+                                      color: Color(0xFF0052CC),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // Support Info
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Jika mengalami masalah login:',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
+                        // Support Info
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Jika mengalami masalah login:',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.email,
-                                  size: 14,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'support@sewainaja.com',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.email,
+                                    size: 14,
+                                    color: Colors.grey,
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.phone,
-                                  size: 14,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '+62 812-3456-7890',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'support@sewainaja.com',
+                                    style: TextStyle(
+                                      color: Colors.grey[700],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.phone,
+                                    size: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '+62 812-3456-7890',
+                                    style: TextStyle(
+                                      color: Colors.grey[700],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
