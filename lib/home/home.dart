@@ -1,10 +1,45 @@
 import 'package:flutter/material.dart';
+import '../auth_service.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _isCheckingAuth = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    if (!await AuthService.isLoggedIn()) {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/');
+      }
+    } else {
+      setState(() => _isCheckingAuth = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    await AuthService.logout();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isCheckingAuth) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final categories = [
       {'icon': Icons.camera_alt, 'label': 'Kamera'},
       {'icon': Icons.kitchen, 'label': 'Blender'},
@@ -16,14 +51,23 @@ class HomePage extends StatelessWidget {
       {'icon': Icons.shopping_bag, 'label': 'Tas'},
     ];
 
-    final recommended = List.generate(4, (index) => {
-          'image': 'https://i.imgur.com/fHyEMsl.jpg', // Ganti dengan gambar aset lokal jika perlu
-          'name': 'Kamera',
-          'price': 'Rp. 100K / hari',
-        });
+    final recommended = List.generate(
+      4,
+      (index) => {
+        'image': 'https://i.imgur.com/fHyEMsl.jpg',
+        'name': 'Kamera',
+        'price': 'Rp. 100K / hari',
+      },
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Home'),
+        actions: [
+          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -97,7 +141,10 @@ class HomePage extends StatelessWidget {
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: Colors.grey[200],
-                          child: Icon(categories[index]['icon'] as IconData, color: Colors.black),
+                          child: Icon(
+                            categories[index]['icon'] as IconData,
+                            color: Colors.black,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -137,7 +184,9 @@ class HomePage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ClipRRect(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
                             child: Image.network(
                               item['image']!,
                               fit: BoxFit.cover,
@@ -152,7 +201,9 @@ class HomePage extends StatelessWidget {
                               children: [
                                 Text(
                                   item['name']!,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 Text(
                                   item['price']!,
@@ -163,7 +214,7 @@ class HomePage extends StatelessWidget {
                                 ),
                               ],
                             ),
-                          )
+                          ),
                         ],
                       ),
                     );

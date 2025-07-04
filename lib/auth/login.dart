@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -49,6 +50,25 @@ class _LoginPageState extends State<LoginPage> {
 
       if (response.statusCode == 200) {
         if (responseBody['status'] == 'success') {
+          // DAPATKAN USER ID DARI RESPONSE
+          dynamic userIdValue = responseBody['user_id'];
+          int userId;
+
+          if (userIdValue is int) {
+            userId = userIdValue;
+          } else if (userIdValue is String) {
+            userId = int.tryParse(userIdValue) ?? 0;
+          } else {
+            throw Exception('Tipe data user_id tidak valid');
+          }
+
+          if (userId <= 0) {
+            throw Exception('User ID tidak valid');
+          }
+
+          // SIMPAN STATUS LOGIN
+          await AuthService.login(userId);
+
           if (mounted) {
             Navigator.pushReplacementNamed(context, '/home');
           }

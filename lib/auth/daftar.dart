@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../auth_service.dart';
 import 'phone_verification_page.dart';
 
 class DaftarPage extends StatefulWidget {
@@ -65,12 +66,15 @@ class _DaftarPageState extends State<DaftarPage> {
 
       if (response.statusCode == 201) {
         // Konversi user_id ke int
+        final userId = int.parse(responseData['user_id'].toString());
+
+        // Simpan status login (sementara)
+        await AuthService.login(userId);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => PhoneVerificationPage(
-              userId: int.parse(responseData['user_id'].toString()),
-            ),
+            builder: (context) => PhoneVerificationPage(userId: userId),
           ),
         );
       } else {
