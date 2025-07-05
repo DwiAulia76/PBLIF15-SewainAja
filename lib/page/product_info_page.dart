@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/buttom_nav_bar.dart';
+import '../widgets/custom_navbar.dart';
 
 class ProductInfoPage extends StatelessWidget {
   const ProductInfoPage({super.key});
@@ -35,7 +35,11 @@ class ProductInfoPage extends StatelessWidget {
                 SizedBox(height: 10),
                 Text(
                   'Rp. 100.000',
-                  style: TextStyle(fontSize: 18, color: Colors.red, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(height: 10),
                 Row(
@@ -52,7 +56,7 @@ class ProductInfoPage extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: const BottomNavBar(),
+      // bottomNavigationBar: const CustomNavBar(),
     );
   }
 }
