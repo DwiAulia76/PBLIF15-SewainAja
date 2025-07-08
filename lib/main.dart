@@ -8,7 +8,7 @@ void main() async {
   // Cek status login saat aplikasi dimulai
   final isLoggedIn = await AuthService.isLoggedIn();
 
-  runApp(SewainAjaApp(initialRoute: isLoggedIn ? '/home' : '/'));
+  runApp(SewainAjaApp(initialRoute: isLoggedIn ? '/main' : '/'));
 }
 
 class SewainAjaApp extends StatelessWidget {

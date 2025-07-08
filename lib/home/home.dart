@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_navbar.dart';
-import '../pencarian/search_page.dart'; // Import halaman pencarian baru
+import '../pencarian/search_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -10,15 +9,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _currentIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final crossAxisCount = screenWidth > 600 ? 3 : 2;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    const navBarHeight = 80.0;
 
     final List<Map<String, dynamic>> categories = [
       {'icon': Icons.camera_alt, 'label': 'Kamera'},
@@ -51,9 +46,7 @@ class _HomePageState extends State<HomePage> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: bottomPadding + navBarHeight + 20,
-                  ),
+                  padding: const EdgeInsets.only(bottom: 20.0),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
@@ -98,7 +91,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Search Field - MODIFIED
+                        // Search Field
                         GestureDetector(
                           onTap: () {
                             Navigator.push(
@@ -146,23 +139,13 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 28),
 
                         // Kategori
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4.0),
-                          child: Text(
-                            'Kategori',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                              color: Colors.grey[800],
-                            ),
-                          ),
-                        ),
+                        _buildSectionTitle('Kategori'),
                         const SizedBox(height: 16),
                         GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 4,
                                 mainAxisSpacing: 8,
                                 crossAxisSpacing: 8,
@@ -170,61 +153,41 @@ class _HomePageState extends State<HomePage> {
                               ),
                           itemCount: categories.length,
                           itemBuilder: (context, index) {
-                            return Material(
-                              color: Colors.transparent,
-                              child: Ink(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: () {},
-                                  splashColor: Colors.blue.withOpacity(0.2),
-                                  highlightColor: Colors.blue.withOpacity(0.1),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                              50,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.grey.withOpacity(
-                                                  0.05,
-                                                ),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Icon(
-                                            categories[index]['icon']
-                                                as IconData,
-                                            color: Colors.blue[700],
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          categories[index]['label'] as String,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey[700],
-                                          ),
-                                          textAlign: TextAlign.center,
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {},
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(50),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.05),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
                                         ),
                                       ],
                                     ),
+                                    child: Icon(
+                                      categories[index]['icon'],
+                                      color: Colors.blue[700],
+                                      size: 20,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    categories[index]['label'],
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[700],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -235,17 +198,7 @@ class _HomePageState extends State<HomePage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4.0),
-                              child: Text(
-                                'Rekomendasi',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ),
+                            _buildSectionTitle('Rekomendasi'),
                             TextButton(
                               onPressed: () {},
                               child: Text(
@@ -301,11 +254,9 @@ class _HomePageState extends State<HomePage> {
                                             return Container(
                                               height: screenHeight * 0.14,
                                               color: Colors.grey[200],
-                                              child: const Center(
-                                                child: Icon(
-                                                  Icons.broken_image,
-                                                  color: Colors.grey,
-                                                ),
+                                              child: const Icon(
+                                                Icons.broken_image,
+                                                color: Colors.grey,
                                               ),
                                             );
                                           },
@@ -364,7 +315,6 @@ class _HomePageState extends State<HomePage> {
                             );
                           },
                         ),
-                        SizedBox(height: bottomPadding + navBarHeight),
                       ],
                     ),
                   ),
@@ -374,13 +324,19 @@ class _HomePageState extends State<HomePage> {
           },
         ),
       ),
-      bottomNavigationBar: CustomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+          color: Colors.grey[800],
+        ),
       ),
     );
   }

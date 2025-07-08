@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../rental/rental_process_screen.dart'; // Import dari folder rental
 
 class ProductDetailScreen extends StatelessWidget {
   final Map<String, dynamic> product;
@@ -8,26 +9,39 @@ class ProductDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(product['name'] ?? 'Detail Produk')),
+      appBar: AppBar(
+        title: Text(product['name'] ?? 'Detail Produk'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Gambar Utama
-            Image.network(
-              product['image'] ?? '',
-              width: double.infinity,
+            Container(
               height: 300,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 300,
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Icon(Icons.broken_image, color: Colors.grey),
-                  ),
-                );
-              },
+              color: Colors.grey[100],
+              child: Image.network(
+                product['image'] ?? '',
+                width: double.infinity,
+                height: 300,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 300,
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        color: Colors.grey,
+                        size: 60,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
 
             // Info Produk
@@ -39,7 +53,7 @@ class ProductDetailScreen extends StatelessWidget {
                   Text(
                     product['name'] ?? 'Nama Produk',
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -47,7 +61,7 @@ class ProductDetailScreen extends StatelessWidget {
                   Text(
                     product['price'] ?? 'Rp 0/hari',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue[700],
                     ),
@@ -57,15 +71,35 @@ class ProductDetailScreen extends StatelessWidget {
                   // Rating & Terjual
                   Row(
                     children: [
-                      Icon(Icons.star, color: Colors.amber[600], size: 24),
-                      const SizedBox(width: 8),
-                      Text(
-                        (product['rating'] ?? 0).toString(),
-                        style: const TextStyle(fontSize: 18),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber[50],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.star,
+                              color: Colors.amber[600],
+                              size: 20,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              (product['rating'] ?? 0).toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Text(
-                        'Terjual ${product['sold'] ?? 0}',
+                        '${product['sold'] ?? 0} Terjual',
                         style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
                     ],
@@ -80,7 +114,11 @@ class ProductDetailScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     product['description'] ?? 'Tidak ada deskripsi',
-                    style: const TextStyle(fontSize: 16, height: 1.5),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                      color: Colors.grey,
+                    ),
                   ),
                   const SizedBox(height: 24),
 
@@ -89,25 +127,25 @@ class ProductDetailScreen extends StatelessWidget {
                     'Fitur Utama',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   ...(product['features'] as List<dynamic>? ?? []).map((
                     feature,
                   ) {
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Icon(
                             Icons.check_circle,
                             color: Colors.green,
-                            size: 16,
+                            size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               feature.toString(),
-                              style: const TextStyle(fontSize: 16),
+                              style: const TextStyle(fontSize: 16, height: 1.4),
                             ),
                           ),
                         ],
@@ -115,31 +153,6 @@ class ProductDetailScreen extends StatelessWidget {
                     );
                   }).toList(),
                   const SizedBox(height: 24),
-
-                  // Pemilik
-                  const Text(
-                    'Disewakan oleh',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 20,
-                        backgroundImage: NetworkImage(
-                          'https://i.imgur.com/Q9WPlEC.jpg',
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        product['owner'] ?? 'Pemilik tidak diketahui',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -147,23 +160,53 @@ class ProductDetailScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton(
-            onPressed: () {
-              // Aksi sewa produk
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.blue[700],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
               ),
-            ),
-            child: const Text(
-              'Sewa Sekarang',
-              style: TextStyle(fontSize: 18, color: Colors.white),
-            ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            RentalProcessScreen(product: product),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.blue[700],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Sewa Sekarang',
+                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  ),
+                ),
+              ),
+
+              IconButton(
+                icon: const Icon(Icons.chat),
+                onPressed: () {
+                  // Tambahkan aksi chat jika diperlukan
+                },
+              ),
+            ],
           ),
         ),
       ),

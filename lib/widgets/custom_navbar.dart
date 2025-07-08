@@ -27,33 +27,34 @@ class CustomNavBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: BottomNavigationBar(
           currentIndex: currentIndex,
-          onTap: onTap,
+          onTap: onTap, // Pastikan ini terhubung dengan benar
           backgroundColor: Colors.transparent,
           elevation: 0,
           selectedItemColor: Colors.blue[700],
           unselectedItemColor: Colors.grey[400],
-          showSelectedLabels: true, // Menampilkan label untuk yang aktif
-          showUnselectedLabels: false, // Hanya label aktif yang ditampilkan
+          showSelectedLabels: true,
+          showUnselectedLabels: false,
           type: BottomNavigationBarType.fixed,
           selectedLabelStyle: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w500,
           ),
-          // Menambahkan tinggi minimum
           iconSize: 26,
-          // Menghilangkan efek hover dan animasi
-          enableFeedback: false,
-          mouseCursor: SystemMouseCursors.basic,
           items: [
             _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-            _buildNavItem(1, Icons.search_outlined, Icons.search, 'Search'),
+            _buildNavItem(1, Icons.history_outlined, Icons.history, 'History'),
             _buildNavItem(
               2,
               Icons.shopping_cart_outlined,
               Icons.shopping_cart,
               'Cart',
             ),
-            _buildNavItem(3, Icons.person_outline, Icons.person, 'Profile'),
+            _buildNavItem(
+              3,
+              Icons.person_outlined,
+              Icons.person,
+              'Profile',
+            ), // Indeks 3 untuk profil
           ],
         ),
       ),
@@ -66,14 +67,15 @@ class CustomNavBar extends StatelessWidget {
     IconData activeIcon,
     String label,
   ) {
+    final isSelected = currentIndex == index;
+
     return BottomNavigationBarItem(
       icon: Padding(
         padding: const EdgeInsets.only(bottom: 4),
-        child: Icon(icon),
-      ),
-      activeIcon: Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Icon(activeIcon),
+        child: Icon(
+          isSelected ? activeIcon : icon,
+          color: isSelected ? Colors.blue[700] : Colors.grey[400],
+        ),
       ),
       label: label,
     );

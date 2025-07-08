@@ -6,10 +6,11 @@ import 'auth/phone_verification_page.dart';
 import 'auth/otp_verification_page.dart';
 import 'auth/address_page.dart';
 import 'auth/identity_upload_page.dart';
-import 'home/home.dart';
+import 'main_layout.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
-  '/': (context) => const StartedPage(),
+  '/started': (context) =>
+      const StartedPage(), // Pindahkan started ke rute terpisah
   '/auth/login': (context) => const auth.LoginPage(),
   '/auth/daftar': (context) => const DaftarPage(),
   '/auth/daftar/phone-verification': (context) {
@@ -33,5 +34,6 @@ final Map<String, WidgetBuilder> appRoutes = {
     final args = ModalRoute.of(context)!.settings.arguments as int;
     return IdentityUploadPage(userId: args);
   },
-  '/home': (context) => const HomePage(),
+  '/main': (context) =>
+      const MainLayout(), // Jadikan MainLayout sebagai rute utama
 };
