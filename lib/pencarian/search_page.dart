@@ -1,5 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../data/dummy_products.dart';
+import 'package:http/http.dart' as http;
 import '../produk/product_card.dart';
 import '../produk/product_detail_screen.dart';
 
@@ -14,18 +16,32 @@ class _SearchPageState extends State<SearchPage>
     with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  TabController? _tabController;
+  late TabController _tabController;
+  bool _isLoading = false;
+  String _errorMessage = '';
+  Timer? _debounceTimer;
 
-  // Daftar kategori
   final List<Map<String, dynamic>> _categories = [
-    {'name': 'Semua', 'icon': Icons.all_inclusive},
-    {'name': 'Elektronik', 'icon': Icons.electrical_services},
-    {'name': 'Fashion', 'icon': Icons.checkroom},
-    {'name': 'Alat Rumah Tangga', 'icon': Icons.home},
-    {'name': 'Olahraga', 'icon': Icons.sports},
-    {'name': 'Hobi', 'icon': Icons.music_note},
-    {'name': 'Kesehatan', 'icon': Icons.health_and_safety},
-    {'name': 'Otomotif', 'icon': Icons.directions_car},
+    {'name': 'Semua', 'icon': Icons.all_inclusive, 'value': ''},
+    {
+      'name': 'Elektronik',
+      'icon': Icons.electrical_services,
+      'value': 'Elektronik',
+    },
+    {'name': 'Fashion', 'icon': Icons.checkroom, 'value': 'Fashion'},
+    {
+      'name': 'Alat Rumah Tangga',
+      'icon': Icons.home,
+      'value': 'Alat Rumah Tangga',
+    },
+    {'name': 'Olahraga', 'icon': Icons.sports, 'value': 'Olahraga'},
+    {'name': 'Hobi', 'icon': Icons.music_note, 'value': 'Hobi'},
+    {
+      'name': 'Kesehatan',
+      'icon': Icons.health_and_safety,
+      'value': 'Kesehatan',
+    },
+    {'name': 'Otomotif', 'icon': Icons.directions_car, 'value': 'Otomotif'},
   ];
 
   List<Map<String, dynamic>> _searchResults = [];
@@ -35,55 +51,101 @@ class _SearchPageState extends State<SearchPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: _categories.length, vsync: this);
-    _searchResults = List.from(dummyProducts);
-
-    // Otomatis fokus ke search field saat halaman terbuka
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).requestFocus(_searchFocusNode);
-    });
+    _fetchProducts();
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _tabController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
-    _tabController?.dispose();
     super.dispose();
   }
 
-  void _performSearch(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _searchResults = List.from(dummyProducts);
-      } else {
-        _searchResults = dummyProducts
-            .where(
-              (product) =>
-                  (product['name'] as String).toLowerCase().contains(
-                    query.toLowerCase(),
-                  ) ||
-                  (product['category'] as String).toLowerCase().contains(
-                    query.toLowerCase(),
-                  ),
-            )
-            .toList();
+  void _onSearchChanged(String query) {
+    if (_debounceTimer?.isActive ?? false) {
+      _debounceTimer?.cancel();
+    }
+
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (query.isEmpty || query.length >= 2) {
+        _performSearch(query);
       }
     });
   }
 
-  void _filterByCategory(int index) {
+  Future<void> _fetchProducts({
+    String keyword = '',
+    String category = '',
+  }) async {
+    if (!mounted) return;
+
     setState(() {
-      _selectedCategoryIndex = index;
-      if (index == 0) {
-        // Semua kategori
-        _searchResults = List.from(dummyProducts);
-      } else {
-        String selectedCategory = _categories[index]['name'] as String;
-        _searchResults = dummyProducts
-            .where((product) => product['category'] == selectedCategory)
-            .toList();
-      }
+      _isLoading = true;
+      _errorMessage = '';
+      _searchResults = [];
     });
+
+    try {
+      final queryParams = {
+        'keyword': keyword,
+        'category': category == 'Semua' ? '' : category,
+      };
+
+      final url = Uri.http(
+        '10.0.2.2',
+        '/admin_sewainaja/api/product/search_product.php',
+        queryParams,
+      );
+
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        final allProducts = List<Map<String, dynamic>>.from(data['data'] ?? []);
+
+        final visibleProducts = allProducts.where((product) {
+          final status = product['status']?.toString().toLowerCase();
+          return status == 'tersedia' || status == 'available';
+        }).toList();
+
+        setState(() {
+          _searchResults = visibleProducts;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception(data['message'] ?? 'Tidak ada data ditemukan');
+      }
+    } on TimeoutException {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Permintaan waktu habis';
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $_errorMessage'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _performSearch(String query) {
+    final category = _categories[_selectedCategoryIndex]['value'] as String;
+    _fetchProducts(keyword: query, category: category);
+  }
+
+  void _filterByCategory(int index) {
+    setState(() => _selectedCategoryIndex = index);
+    final category = _categories[index]['value'] as String;
+    _fetchProducts(keyword: _searchController.text, category: category);
   }
 
   void _navigateToProductDetail(Map<String, dynamic> product) {
@@ -95,12 +157,18 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
+  String _getStatusLabel(String status) {
+    final normalized = status.toLowerCase();
+    if (normalized == 'tersedia' || normalized == 'available') {
+      return 'Tersedia';
+    } else if (normalized == 'disewa') {
+      return 'Disewa';
+    }
+    return status;
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_tabController == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: Container(
@@ -130,13 +198,12 @@ class _SearchPageState extends State<SearchPage>
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
             ),
             style: const TextStyle(fontSize: 16),
-            onChanged: _performSearch,
+            onChanged: _onSearchChanged,
           ),
         ),
       ),
       body: Column(
         children: [
-          // Tab Kategori
           Container(
             color: Colors.white,
             child: TabBar(
@@ -159,8 +226,6 @@ class _SearchPageState extends State<SearchPage>
               onTap: _filterByCategory,
             ),
           ),
-
-          // Hasil Pencarian
           Expanded(child: _buildSearchResults()),
         ],
       ),
@@ -168,6 +233,48 @@ class _SearchPageState extends State<SearchPage>
   }
 
   Widget _buildSearchResults() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 60, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              'Terjadi kesalahan',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.red[700],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _fetchProducts(
+                keyword: _searchController.text,
+                category:
+                    _categories[_selectedCategoryIndex]['value'] as String,
+              ),
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_searchResults.isEmpty) {
       return const Center(
         child: Column(

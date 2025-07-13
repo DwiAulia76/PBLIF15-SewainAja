@@ -1,39 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:sewainaja/payment/payment_screen.dart'; // Sesuaikan dengan nama aplikasi Anda
 
 class ConfirmationScreen extends StatelessWidget {
   final Map<String, dynamic> product;
   final DateTime startDate;
   final DateTime endDate;
+  final int rentalId;
 
   const ConfirmationScreen({
     super.key,
     required this.product,
     required this.startDate,
     required this.endDate,
+    required this.rentalId,
   });
-
-  double _calculateTotalPrice() {
-    final priceString =
-        product['price']?.replaceAll('Rp', '')?.replaceAll('/hari', '') ?? '0';
-    final pricePerDay = double.tryParse(priceString) ?? 0.0;
-
-    final duration = endDate.difference(startDate);
-    final days = duration.inDays;
-    final hours = duration.inHours;
-
-    final totalDays = days + (hours % 24 > 0 ? 1 : 0);
-    return pricePerDay * totalDays;
-  }
 
   @override
   Widget build(BuildContext context) {
-    final totalPrice = _calculateTotalPrice();
-    final duration = endDate.difference(startDate);
-    final days = duration.inDays;
-    final hours = duration.inHours % 24;
-    final minutes = duration.inMinutes % 60;
+    final duration = endDate.difference(startDate).inDays;
+    final priceString = product['price'].toString();
+    final cleanPrice = priceString.replaceAll(RegExp(r'[^0-9]'), '');
+    final dailyPrice = int.tryParse(cleanPrice) ?? 0;
+    final totalPrice = duration * dailyPrice;
 
     return Scaffold(
       appBar: AppBar(
@@ -43,10 +31,10 @@ class ConfirmationScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Card(
               elevation: 4,
@@ -55,87 +43,41 @@ class ConfirmationScreen extends StatelessWidget {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        product['image'] ?? '',
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 80,
-                            height: 80,
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.image, color: Colors.grey),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product['name'] ?? 'Nama Produk',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            product['price'] ?? 'Rp 0/hari',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Detail Penyewaan',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          size: 50,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Penyewaan Berhasil!',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'ID Penyewaan: #$rentalId',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
-                    _buildDetailRow(
-                      'Mulai Sewa',
-                      DateFormat('dd MMM yyyy, HH:mm').format(startDate),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(
-                      'Selesai Sewa',
-                      DateFormat('dd MMM yyyy, HH:mm').format(endDate),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(
-                      'Durasi',
-                      '$days hari $hours jam $minutes menit',
+                    const Text(
+                      'Silakan lakukan pembayaran untuk menyelesaikan proses penyewaan',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16),
                     ),
                   ],
                 ),
@@ -144,27 +86,40 @@ class ConfirmationScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
+            const Text(
+              'Detail Penyewaan',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
             Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              elevation: 2,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    _buildPriceRow(
-                      'Harga Sewa',
-                      product['price'] ?? 'Rp 0/hari',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPriceRow('Durasi Sewa', '$days hari'),
-                    const SizedBox(height: 12),
+                    _buildDetailRow('Produk', product['name'] ?? '-'),
                     const Divider(),
-                    const SizedBox(height: 12),
-                    _buildPriceRow(
+                    _buildDetailRow(
+                      'Harga Per Hari',
+                      product['price'] ?? 'Rp 0',
+                    ),
+                    const Divider(),
+                    _buildDetailRow(
+                      'Waktu Mulai',
+                      DateFormat('dd MMMM yyyy HH:mm').format(startDate),
+                    ),
+                    const Divider(),
+                    _buildDetailRow(
+                      'Waktu Selesai',
+                      DateFormat('dd MMMM yyyy HH:mm').format(endDate),
+                    ),
+                    const Divider(),
+                    _buildDetailRow('Durasi', '$duration hari'),
+                    const Divider(),
+                    _buildDetailRow(
                       'Total Pembayaran',
-                      'Rp${NumberFormat('#,###').format(totalPrice)}',
+                      'Rp ${NumberFormat('#,###').format(totalPrice)}',
                       isTotal: true,
                     ),
                   ],
@@ -172,70 +127,108 @@ class ConfirmationScreen extends StatelessWidget {
               ),
             ),
 
-            const Spacer(),
+            const SizedBox(height: 24),
 
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PaymentScreen(
-                      product: product,
-                      startDate: startDate,
-                      endDate: endDate,
-                      totalPrice: totalPrice,
+            const Text(
+              'Metode Pembayaran',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
+            Card(
+              elevation: 2,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(
+                      Icons.account_balance,
+                      color: Colors.blue,
+                    ),
+                    title: const Text('Transfer Bank'),
+                    subtitle: const Text('BNI, BRI, Mandiri, BCA'),
+                    trailing: Radio(
+                      value: 1,
+                      groupValue: 1,
+                      onChanged: (value) {},
                     ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Bayar Sekarang',
-                style: TextStyle(fontSize: 18, color: Colors.white),
+                  const Divider(height: 0),
+                  ListTile(
+                    leading: const Icon(Icons.qr_code, color: Colors.green),
+                    title: const Text('QRIS'),
+                    subtitle: const Text('Semua e-wallet'),
+                    trailing: Radio(
+                      value: 2,
+                      groupValue: 1,
+                      onChanged: (value) {},
+                    ),
+                  ),
+                  const Divider(height: 0),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.credit_card,
+                      color: Colors.orange,
+                    ),
+                    title: const Text('Kartu Kredit'),
+                    subtitle: const Text('Visa, Mastercard'),
+                    trailing: Radio(
+                      value: 3,
+                      groupValue: 1,
+                      onChanged: (value) {},
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: () {
+            // Proses pembayaran
+          },
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: Colors.green,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: const Text(
+            'Bayar Sekarang',
+            style: TextStyle(fontSize: 18, color: Colors.white),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildDetailRow(String title, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: const TextStyle(color: Colors.grey)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  Widget _buildPriceRow(String title, String value, {bool isTotal = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: isTotal ? 18 : 16,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+  Widget _buildDetailRow(String title, String value, {bool isTotal = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[700],
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: isTotal ? 18 : 16,
-            fontWeight: FontWeight.bold,
-            color: isTotal ? Colors.blue : Colors.black,
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              color: isTotal ? Colors.green : Colors.black,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

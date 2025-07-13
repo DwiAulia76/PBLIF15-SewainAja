@@ -6,92 +6,151 @@ class ProductCard extends StatelessWidget {
 
   const ProductCard({super.key, required this.product, required this.onTap});
 
+  String getStatusLabel(String status) {
+    final normalized = status.toLowerCase();
+    if (normalized == 'available' || normalized == 'tersedia') {
+      return 'Tersedia';
+    } else if (normalized == 'disewa') {
+      return 'Disewa';
+    } else {
+      return status;
+    }
+  }
+
+  Color getStatusColor(String status) {
+    final normalized = status.toLowerCase();
+    if (normalized == 'available' || normalized == 'tersedia') {
+      return Colors.green;
+    } else if (normalized == 'disewa') {
+      return Colors.red;
+    } else {
+      return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: isDarkMode ? Colors.grey[900] : Colors.white,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 6,
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Gambar Produk
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: Image.network(
-                product['image'] ?? '',
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 120,
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: Icon(Icons.broken_image, color: Colors.grey),
-                    ),
-                  );
-                },
-              ),
-            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Gambar produk
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 1.2,
+                    child:
+                        product['image'] != null && product['image'].isNotEmpty
+                        ? Image.network(
+                            product['image'],
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                          )
+                        : _buildPlaceholder(),
+                  ),
+                ),
 
-            // Detail Produk
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product['name'] ?? 'Nama Produk',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                // Informasi produk
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    product['price'] ?? 'Rp 0/hari',
-                    style: TextStyle(
-                      color: Colors.blue[700],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.star, color: Colors.amber[600], size: 16),
-                      const SizedBox(width: 4),
                       Text(
-                        (product['rating'] ?? 0).toString(),
-                        style: const TextStyle(fontSize: 12),
+                        product['name'] ?? 'Nama Produk',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(height: 4),
                       Text(
-                        'Terjual ${product['sold'] ?? 0}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        product['price'] ?? 'Rp0',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        (product['category']?.toString() ?? 'Kategori')
+                            .toLowerCase(),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
                       ),
                     ],
                   ),
-                ],
+                ),
+              ],
+            ),
+
+            // Badge Status
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: getStatusColor(product['status'] ?? ''),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  getStatusLabel(product['status'] ?? ''),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: const Center(
+        child: Icon(Icons.image, color: Colors.grey, size: 40),
       ),
     );
   }

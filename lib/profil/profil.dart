@@ -306,12 +306,9 @@ class ProfileScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Anda telah keluar'),
-                    duration: Duration(seconds: 2),
-                  ),
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/started', // Ganti dengan route yang sesuai
+                  (Route<dynamic> route) => false,
                 );
               },
               child: const Text('Keluar', style: TextStyle(color: Colors.red)),

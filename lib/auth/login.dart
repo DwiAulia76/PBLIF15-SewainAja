@@ -70,7 +70,7 @@ class _LoginPageState extends State<LoginPage> {
           await AuthService.login(userId);
 
           if (mounted) {
-            Navigator.pushReplacementNamed(context, '/home');
+            Navigator.pushReplacementNamed(context, '/main');
           }
         } else {
           setState(() {

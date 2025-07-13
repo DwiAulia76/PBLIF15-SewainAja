@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../auth_service.dart';
-import 'phone_verification_page.dart';
 
 class DaftarPage extends StatefulWidget {
   const DaftarPage({super.key});
@@ -57,25 +56,22 @@ class _DaftarPageState extends State<DaftarPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2/admin_sewainaja/api/register/step1.php'),
+        Uri.parse('http://10.0.2.2/admin_sewainaja/api/register/daftar.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(requestData),
       );
 
       final responseData = json.decode(response.body);
 
+      // Di dalam method _register
       if (response.statusCode == 201) {
-        // Konversi user_id ke int
         final userId = int.parse(responseData['user_id'].toString());
-
-        // Simpan status login (sementara)
         await AuthService.login(userId);
 
-        Navigator.pushReplacement(
+        Navigator.pushReplacementNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => PhoneVerificationPage(userId: userId),
-          ),
+          '/auth/daftar/phone-address-verification',
+          arguments: userId,
         );
       } else {
         setState(() {

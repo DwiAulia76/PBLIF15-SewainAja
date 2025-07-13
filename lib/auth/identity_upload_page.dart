@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-// import 'package:http/http.dart' as http; // Di-comment untuk mode debug
-// import 'dart:convert'; // Di-comment untuk mode debug
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'dart:async';
 
 class IdentityUploadPage extends StatefulWidget {
   final int userId;
@@ -22,27 +23,41 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _identityFile = File(pickedFile.path);
-      });
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _identityFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'Gagal memilih gambar: ${e.toString()}');
     }
   }
 
   Future<void> _uploadIdentity() async {
+    // Validasi input
     if (_nikController.text.isEmpty) {
       setState(() => _errorMessage = 'NIK wajib diisi');
       return;
     }
+
     if (!RegExp(r'^\d{16}$').hasMatch(_nikController.text)) {
       setState(() => _errorMessage = 'NIK harus 16 digit angka');
       return;
     }
+
     if (_identityType == null) {
       setState(() => _errorMessage = 'Pilih tipe identitas');
       return;
     }
+
     if (_identityFile == null) {
       setState(() => _errorMessage = 'Pilih file identitas');
       return;
@@ -53,64 +68,74 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
       _errorMessage = null;
     });
 
-    // MODE DEBUG: Simulasi proses upload identitas
-    await Future.delayed(const Duration(seconds: 2)); // Simulasi proses
-
-    // Tampilkan informasi debug di console
-    debugPrint('DEBUG: Identitas berhasil diunggah');
-    debugPrint('User ID: ${widget.userId}');
-    debugPrint('NIK: ${_nikController.text}');
-    debugPrint('Tipe Identitas: $_identityType');
-    debugPrint('File Path: ${_identityFile!.path}');
-
-    // Navigasi ke home setelah simulasi berhasil
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/home',
-      (Route<dynamic> route) => false,
-    );
-
-    setState(() => _isLoading = false);
-
-    /* KODE ASLI (DI-COMMENT)
     try {
-      // Konversi gambar ke base64
-      final bytes = await _identityFile!.readAsBytes();
+      // Kompresi gambar sebelum di-upload
+      final compressedFile = await _compressImage(_identityFile!);
+      final bytes = await compressedFile.readAsBytes();
       final base64Image = base64Encode(bytes);
 
-      final response = await http.post(
-        Uri.parse(
-          'http://10.0.2.2/admin_sewainaja/api/register/upload_identity.php',
-        ),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'user_id': widget.userId,
-          'nik': _nikController.text,
-          'identity_type': _identityType,
-          'identity_file': base64Image,
-        }),
-      );
+      // Kirim request ke API
+      final response = await http
+          .post(
+            Uri.parse(
+              'http://10.0.2.2/admin_sewainaja/api/register/upload_identity.php',
+            ),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'user_id': widget.userId,
+              'nik': _nikController.text,
+              'identity_type': _identityType,
+              'identity_file': base64Image,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
 
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home',
-          (Route<dynamic> route) => false,
-        );
+        if (responseData['status'] == 'success') {
+          if (!mounted) return;
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/main', (Route<dynamic> route) => false);
+        } else {
+          setState(() {
+            _errorMessage =
+                responseData['message'] ?? 'Gagal mengunggah identitas';
+          });
+        }
       } else {
         setState(() {
           _errorMessage =
-              responseData['message'] ?? 'Gagal mengunggah identitas';
+              responseData['message'] ??
+              'Error ${response.statusCode}: Gagal mengunggah identitas';
         });
       }
+    } on http.ClientException catch (e) {
+      setState(() => _errorMessage = 'Koneksi error: ${e.message}');
+    } on TimeoutException {
+      setState(() => _errorMessage = 'Waktu permintaan habis');
     } catch (e) {
-      setState(() => _errorMessage = 'Koneksi error: $e');
+      setState(() => _errorMessage = 'Terjadi kesalahan: ${e.toString()}');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-    */
+  }
+
+  Future<File> _compressImage(File file) async {
+    try {
+      // Implementasi kompresi gambar nyata akan bergantung pada library yang digunakan
+      // Di sini kita hanya mengembalikan file asli sebagai placeholder
+      return file;
+    } catch (e) {
+      debugPrint('Kompresi gambar gagal: $e');
+      return file;
+    }
   }
 
   @override
@@ -126,7 +151,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
         ),
         child: Stack(
           children: [
-            // Tombol back di pojok kiri atas
             Positioned(
               top: 40,
               left: 16,
@@ -144,7 +168,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Icon visual
                       Container(
                         width: 80,
                         height: 80,
@@ -168,7 +191,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Judul
                       const Text(
                         'Verifikasi Identitas',
                         style: TextStyle(
@@ -179,7 +201,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Deskripsi
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.0),
                         child: Text(
@@ -190,7 +211,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Card untuk form input
                       Card(
                         elevation: 4,
                         shape: RoundedRectangleBorder(
@@ -211,7 +231,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                               ),
                               const SizedBox(height: 20),
 
-                              // Input NIK
                               TextField(
                                 controller: _nikController,
                                 keyboardType: TextInputType.number,
@@ -239,7 +258,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                               ),
                               const SizedBox(height: 20),
 
-                              // Dropdown Tipe Identitas
                               DropdownButtonFormField<String>(
                                 value: _identityType,
                                 items: ['KTP', 'SIM'].map((String value) {
@@ -273,7 +291,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                               ),
                               const SizedBox(height: 20),
 
-                              // Unggah Foto Identitas
                               const Text(
                                 'Unggah Foto Identitas',
                                 style: TextStyle(
@@ -306,7 +323,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                               ),
                               const SizedBox(height: 10),
 
-                              // Preview gambar
                               if (_identityFile != null)
                                 Container(
                                   padding: const EdgeInsets.all(8),
@@ -321,7 +337,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                                 ),
                               const SizedBox(height: 16),
 
-                              // Pesan error
                               if (_errorMessage != null)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 8),
@@ -339,7 +354,6 @@ class _IdentityUploadPageState extends State<IdentityUploadPage> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Tombol Selesai
                       SizedBox(
                         width: double.infinity,
                         height: 52,
