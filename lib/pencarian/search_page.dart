@@ -64,10 +64,7 @@ class _SearchPageState extends State<SearchPage>
   }
 
   void _onSearchChanged(String query) {
-    if (_debounceTimer?.isActive ?? false) {
-      _debounceTimer?.cancel();
-    }
-
+    if (_debounceTimer?.isActive ?? false) _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       if (query.isEmpty || query.length >= 2) {
         _performSearch(query);
@@ -105,17 +102,22 @@ class _SearchPageState extends State<SearchPage>
       if (response.statusCode == 200 && data['status'] == 'success') {
         final allProducts = List<Map<String, dynamic>>.from(data['data'] ?? []);
 
-        final visibleProducts = allProducts.where((product) {
-          final status = product['status']?.toString().toLowerCase();
-          return status == 'tersedia' || status == 'available';
+        final available = allProducts.where((p) {
+          final s = (p['status'] ?? '').toString().toLowerCase();
+          return s == 'tersedia' || s == 'available';
+        }).toList();
+
+        final rented = allProducts.where((p) {
+          final s = (p['status'] ?? '').toString().toLowerCase();
+          return s == 'disewa' || s == 'rented';
         }).toList();
 
         setState(() {
-          _searchResults = visibleProducts;
+          _searchResults = [...available, ...rented];
           _isLoading = false;
         });
       } else {
-        throw Exception(data['message'] ?? 'Tidak ada data ditemukan');
+        throw Exception(data['message'] ?? 'Gagal mengambil data');
       }
     } on TimeoutException {
       setState(() {
@@ -127,13 +129,6 @@ class _SearchPageState extends State<SearchPage>
         _isLoading = false;
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $_errorMessage'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -157,14 +152,43 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  String _getStatusLabel(String status) {
-    final normalized = status.toLowerCase();
-    if (normalized == 'tersedia' || normalized == 'available') {
-      return 'Tersedia';
-    } else if (normalized == 'disewa') {
-      return 'Disewa';
+  Widget _buildSearchResults() {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    if (_errorMessage.isNotEmpty) {
+      return Center(child: Text(_errorMessage));
     }
-    return status;
+
+    if (_searchResults.isEmpty) {
+      return const Center(child: Text("Tidak ditemukan produk."));
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 0.75,
+      ),
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final product = _searchResults[index];
+        final status = (product['status'] ?? '').toString().toLowerCase();
+        final isAvailable = status == 'tersedia' || status == 'available';
+
+        return Opacity(
+          opacity: isAvailable ? 1.0 : 0.4, // Disewa = abu-abu
+          child: AbsorbPointer(
+            absorbing: !isAvailable,
+            child: ProductCard(
+              product: product,
+              onTap: () => _navigateToProductDetail(product),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -183,9 +207,8 @@ class _SearchPageState extends State<SearchPage>
             autofocus: true,
             decoration: InputDecoration(
               hintText: 'Cari barang...',
-              hintStyle: const TextStyle(color: Colors.grey),
-              border: InputBorder.none,
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              border: InputBorder.none,
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear, color: Colors.grey),
@@ -212,13 +235,13 @@ class _SearchPageState extends State<SearchPage>
               indicatorColor: Colors.blue,
               labelColor: Colors.blue,
               unselectedLabelColor: Colors.grey,
-              tabs: _categories.map((category) {
+              tabs: _categories.map((c) {
                 return Tab(
                   child: Row(
                     children: [
-                      Icon(category['icon'] as IconData, size: 18),
+                      Icon(c['icon'] as IconData, size: 18),
                       const SizedBox(width: 6),
-                      Text(category['name'] as String),
+                      Text(c['name'] as String),
                     ],
                   ),
                 );
@@ -229,89 +252,6 @@ class _SearchPageState extends State<SearchPage>
           Expanded(child: _buildSearchResults()),
         ],
       ),
-    );
-  }
-
-  Widget _buildSearchResults() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_errorMessage.isNotEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 60, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Terjadi kesalahan',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.red[700],
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                _errorMessage,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _fetchProducts(
-                keyword: _searchController.text,
-                category:
-                    _categories[_selectedCategoryIndex]['value'] as String,
-              ),
-              child: const Text('Coba Lagi'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_searchResults.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 60, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'Tidak ditemukan hasil untuk pencarian ini',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Coba kata kunci lain atau kategori berbeda',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.75,
-      ),
-      itemCount: _searchResults.length,
-      itemBuilder: (context, index) {
-        final product = _searchResults[index];
-        return ProductCard(
-          product: product,
-          onTap: () => _navigateToProductDetail(product),
-        );
-      },
     );
   }
 }

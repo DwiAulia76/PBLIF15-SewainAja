@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import 'success_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -10,6 +12,7 @@ class PaymentScreen extends StatefulWidget {
   final DateTime startDate;
   final DateTime endDate;
   final double totalPrice;
+  final String rentalId;
 
   const PaymentScreen({
     Key? key,
@@ -17,6 +20,7 @@ class PaymentScreen extends StatefulWidget {
     required this.startDate,
     required this.endDate,
     required this.totalPrice,
+    required this.rentalId,
   }) : super(key: key);
 
   @override
@@ -26,61 +30,93 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   File? _paymentProof;
   bool _isUploading = false;
+
   final Color _primaryColor = const Color(0xFF0052CC);
   final Color _lightBlue = const Color(0xFFE3F2FD);
 
-  Future<void> _uploadPaymentProof() async {
-    setState(() => _isUploading = true);
+  Future<void> _pickPaymentProof() async {
+    final picker = ImagePicker();
     try {
-      final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
       if (pickedFile != null) {
         setState(() {
           _paymentProof = File(pickedFile.path);
-          _isUploading = false;
         });
-      } else {
-        setState(() => _isUploading = false);
       }
     } on PlatformException catch (e) {
-      setState(() => _isUploading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal memilih gambar: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } catch (e) {
-      setState(() => _isUploading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Terjadi kesalahan: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showError('Gagal memilih gambar: ${e.message}');
     }
+  }
+
+  Future<void> _submitPaymentProof() async {
+    if (_paymentProof == null) {
+      _showError('Silakan unggah bukti pembayaran terlebih dahulu.');
+      return;
+    }
+
+    setState(() => _isUploading = true);
+
+    try {
+      final base64Image = base64Encode(await _paymentProof!.readAsBytes());
+      final response = await http.post(
+        Uri.parse(
+          'http://10.0.2.2/admin_sewainaja/api/payment/store_payment.php',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'transaction_id': widget.rentalId,
+          'amount': widget.totalPrice,
+          'payment_method': 'Transfer Bank',
+          'payment_proof': base64Image,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SuccessScreen(
+              product: widget.product,
+              startDate: widget.startDate,
+              endDate: widget.endDate,
+              totalPrice: widget.totalPrice,
+              transactionId: widget.rentalId,
+              rentalId: widget.rentalId,
+            ),
+          ),
+        );
+      } else {
+        _showError(data['message'] ?? 'Gagal menyimpan pembayaran.');
+      }
+    } catch (e) {
+      _showError('Terjadi kesalahan saat mengirim data: $e');
+    } finally {
+      setState(() => _isUploading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final duration = widget.endDate.difference(widget.startDate);
-    final days = duration.inDays;
+    final days = widget.endDate.difference(widget.startDate).inDays;
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Pembayaran',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        elevation: 0,
-        centerTitle: true,
+        title: const Text('Pembayaran'),
         backgroundColor: Colors.white,
         foregroundColor: _primaryColor,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -89,35 +125,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
           children: [
             _buildProductCard(),
             const SizedBox(height: 20),
-            _buildPaymentDetail(days),
-            const SizedBox(height: 24),
-            _buildBankInfo(),
-            const SizedBox(height: 16),
+            _buildPaymentDetail(days, formatter),
+            const SizedBox(height: 20),
+            _buildBankInfo(formatter),
+            const SizedBox(height: 20),
             _buildUploadSection(),
             const SizedBox(height: 32),
-            _PaymentButton(
-              text: 'Konfirmasi Pembayaran',
-              onPressed: _paymentProof == null
-                  ? null
-                  : () {
-                      final transactionId =
-                          'TRX-${DateTime.now().millisecondsSinceEpoch}';
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SuccessScreen(
-                            product: widget.product,
-                            startDate: widget.startDate,
-                            endDate: widget.endDate,
-                            totalPrice: widget.totalPrice,
-                            transactionId: transactionId,
-                          ),
-                        ),
-                      );
-                    },
-            ),
-
-            const SizedBox(height: 24),
+            _buildPaymentButton(),
           ],
         ),
       ),
@@ -127,7 +141,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Widget _buildProductCard() {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -135,17 +148,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                widget.product['image'] ?? 'https://via.placeholder.com/80',
+                widget.product['image'] ?? '',
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
+                errorBuilder: (_, __, ___) => Container(
                   width: 80,
                   height: 80,
-                  decoration: BoxDecoration(
-                    color: _lightBlue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  color: _lightBlue,
                   child: Icon(Icons.image, color: _primaryColor),
                 ),
               ),
@@ -158,23 +168,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Text(
                     widget.product['name'] ?? 'Nama Produk',
                     style: const TextStyle(
-                      fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    '${widget.product['price'] ?? 0}/hari',
+                    'Rp ${widget.product['price_per_day'] ?? widget.product['price']}/hari',
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
                       color: _primaryColor,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${DateFormat('dd MMM yyyy').format(widget.startDate)} - ${DateFormat('dd MMM yyyy').format(widget.endDate)}',
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
@@ -185,36 +194,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildPaymentDetail(int days) {
+  Widget _buildPaymentDetail(int days, NumberFormat formatter) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Rincian Pembayaran',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: _primaryColor,
-              ),
-            ),
+            Text('Rincian Pembayaran', style: _sectionTitleStyle()),
             const SizedBox(height: 16),
             _buildPriceRow(
               'Harga Sewa',
-              '${widget.product['price'] ?? 0}/hari',
+              'Rp ${widget.product['price_per_day'] ?? widget.product['price']}/hari',
             ),
-            const SizedBox(height: 12),
             _buildPriceRow('Durasi Sewa', '$days hari'),
-            const SizedBox(height: 12),
             Divider(color: Colors.grey[300]),
-            const SizedBox(height: 12),
             _buildPriceRow(
               'Total Pembayaran',
-              'Rp${NumberFormat('#,###').format(widget.totalPrice)}',
+              formatter.format(widget.totalPrice),
               isTotal: true,
             ),
           ],
@@ -223,41 +221,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildBankInfo() {
+  Widget _buildBankInfo(NumberFormat formatter) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Informasi Transfer Bank',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: _primaryColor,
-          ),
-        ),
+        Text('Informasi Transfer Bank', style: _sectionTitleStyle()),
         const SizedBox(height: 12),
         Card(
-          color: _primaryColor.withOpacity(0.1),
+          color: _primaryColor.withOpacity(0.05),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: _primaryColor, width: 1.5),
+            side: BorderSide(color: _primaryColor),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildBankInfoRow('Nama Bank', 'Bank Central Asia (BCA)'),
-                const SizedBox(height: 10),
-                _buildBankInfoRow('Nomor Rekening', '1234 5678 9012'),
-                const SizedBox(height: 10),
+                _buildBankInfoRow('Nama Bank', 'BCA'),
+                _buildBankInfoRow('No. Rekening', '1234567890'),
                 _buildBankInfoRow('Atas Nama', 'SewainAja Official'),
-                const SizedBox(height: 10),
                 _buildBankInfoRow(
                   'Jumlah Transfer',
-                  'Rp${NumberFormat('#,###').format(widget.totalPrice)}',
+                  formatter.format(widget.totalPrice),
                 ),
-                const SizedBox(height: 10),
               ],
             ),
           ),
@@ -270,238 +256,120 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Unggah Bukti Pembayaran',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: _primaryColor,
-          ),
-        ),
+        Text('Unggah Bukti Pembayaran', style: _sectionTitleStyle()),
         const SizedBox(height: 12),
         GestureDetector(
-          onTap: _uploadPaymentProof,
+          onTap: _pickPaymentProof,
           child: Container(
             height: 150,
-            width: double.infinity,
             decoration: BoxDecoration(
+              border: Border.all(color: _primaryColor.withOpacity(0.5)),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _primaryColor.withOpacity(0.5),
-                width: 1.5,
-              ),
-              color: Colors.grey[50],
+              color: Colors.grey[100],
             ),
             child: Center(
               child: _isUploading
                   ? const CircularProgressIndicator()
+                  : _paymentProof == null
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.cloud_upload,
+                          color: _primaryColor,
+                          size: 40,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Klik untuk unggah bukti transfer',
+                          style: TextStyle(
+                            color: _primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: _paymentProof == null
-                          ? [
-                              Icon(
-                                Icons.cloud_upload,
-                                size: 40,
-                                color: _primaryColor,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Klik untuk mengunggah bukti transfer',
-                                style: TextStyle(
-                                  color: _primaryColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Format: JPG, PNG (maks. 5MB)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ]
-                          : [
-                              const Icon(
-                                Icons.check_circle,
-                                size: 40,
-                                color: Colors.green,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Bukti pembayaran berhasil diunggah',
-                                style: TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _paymentProof!.path.split('/').last,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[700],
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                      children: const [
+                        Icon(Icons.check_circle, color: Colors.green, size: 40),
+                        SizedBox(height: 8),
+                        Text(
+                          'Bukti berhasil diunggah',
+                          style: TextStyle(color: Colors.green),
+                        ),
+                      ],
                     ),
             ),
           ),
         ),
-        if (_paymentProof != null)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Center(
-              child: Text(
-                'Klik kotak di atas untuk mengubah bukti pembayaran',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-          ),
       ],
     );
   }
 
-  Widget _buildBankInfoRow(String title, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 120,
+  Widget _buildPaymentButton() {
+    final isEnabled = _paymentProof != null && !_isUploading;
+    return GestureDetector(
+      onTap: isEnabled ? _submitPaymentProof : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: isEnabled ? _primaryColor : Colors.grey,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
           child: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            'Konfirmasi Pembayaran',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
-        const Text(': ', style: TextStyle(fontWeight: FontWeight.bold)),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildPriceRow(String title, String value, {bool isTotal = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: isTotal ? 16 : 14,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            color: Colors.grey[600],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(color: Colors.grey)),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isTotal ? _primaryColor : Colors.black,
+            ),
           ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: isTotal ? 17 : 15,
-            fontWeight: FontWeight.bold,
-            color: isTotal ? _primaryColor : Colors.black,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PaymentButton extends StatefulWidget {
-  final String text;
-  final VoidCallback? onPressed;
-
-  const _PaymentButton({required this.text, this.onPressed});
-
-  @override
-  State<_PaymentButton> createState() => _PaymentButtonState();
-}
-
-class _PaymentButtonState extends State<_PaymentButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  bool _isHovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-    );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.97,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(TapDownDetails details) {
-    if (widget.onPressed != null) _controller.forward();
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    if (widget.onPressed != null) {
-      _controller.reverse();
-      widget.onPressed!();
-    }
-  }
-
-  void _onTapCancel() => _controller.reverse();
-
-  @override
-  Widget build(BuildContext context) {
-    final isEnabled = widget.onPressed != null;
-    final Color primaryColor = const Color(0xFF0052CC);
-    final Color hoverColor = const Color(0xFF0045A8);
-    final Color buttonColor = isEnabled
-        ? (_isHovered ? hoverColor : primaryColor)
-        : Colors.grey;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTapDown: isEnabled ? _onTapDown : null,
-        onTapUp: isEnabled ? _onTapUp : null,
-        onTapCancel: isEnabled ? _onTapCancel : null,
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return Transform.scale(
-              scale: _scaleAnimation.value,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: buttonColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: Text(
-                      widget.text,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildBankInfoRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const Text(': '),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  TextStyle _sectionTitleStyle() {
+    return TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+      color: _primaryColor,
     );
   }
 }

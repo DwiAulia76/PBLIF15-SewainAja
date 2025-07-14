@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'detail_transaksi.dart';
+import 'detail_transaksi.dart'; // Pastikan file ini ada dan menerima rentalId
 
 class SuccessScreen extends StatelessWidget {
   final Map<String, dynamic> product;
@@ -8,6 +8,7 @@ class SuccessScreen extends StatelessWidget {
   final DateTime endDate;
   final double totalPrice;
   final String transactionId;
+  final String rentalId;
 
   const SuccessScreen({
     super.key,
@@ -16,6 +17,7 @@ class SuccessScreen extends StatelessWidget {
     required this.endDate,
     required this.totalPrice,
     required this.transactionId,
+    required this.rentalId,
   });
 
   @override
@@ -104,7 +106,7 @@ class SuccessScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${days} hari',
+                    '$days hari',
                     style: const TextStyle(fontSize: 16, color: Colors.blue),
                   ),
                 ],
@@ -126,12 +128,12 @@ class SuccessScreen extends StatelessWidget {
           children: [
             _buildDetailRow(
               'Mulai Sewa',
-              DateFormat('dd MMM yyyy, HH:mm').format(startDate),
+              DateFormat('dd MMM yyyy').format(startDate),
             ),
             const SizedBox(height: 12),
             _buildDetailRow(
               'Selesai Sewa',
-              DateFormat('dd MMM yyyy, HH:mm').format(endDate),
+              DateFormat('dd MMM yyyy').format(endDate),
             ),
             const SizedBox(height: 12),
             _buildDetailRow(
@@ -166,9 +168,8 @@ class SuccessScreen extends StatelessWidget {
   Widget _buildHomeButton(BuildContext context) {
     return ElevatedButton(
       onPressed: () {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
       },
-
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         backgroundColor: const Color(0xFF0052CC),
@@ -188,11 +189,12 @@ class SuccessScreen extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => OwnerRentalDetailScreen(
-              transactionId: transactionId,
+              rentalId: rentalId,
               product: product,
               startDate: startDate,
               endDate: endDate,
               totalPrice: totalPrice,
+              transactionId: transactionId,
             ),
           ),
         );

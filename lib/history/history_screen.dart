@@ -1,125 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../payment/detail_transaksi.dart'; // Pastikan path ini benar
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../auth_service.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> transactions = [
-      {
-        'id': 'TRX004',
-        'productName': 'Lighting Studio Professional',
-        'startDate': DateTime.now().subtract(const Duration(days: 2)),
-        'endDate': DateTime.now(),
-        'totalPrice': 450000.0,
-        'status': 'disewa',
-        'imageUrl': 'https://via.placeholder.com/300x150.png?text=LIGHT',
-      },
-      {
-        'id': 'TRX005',
-        'productName': 'Camera DSLR Kit',
-        'startDate': DateTime.now().subtract(const Duration(days: 5)),
-        'endDate': DateTime.now().add(const Duration(days: 2)),
-        'totalPrice': 325000.0,
-        'status': 'selesai',
-        'imageUrl': 'https://via.placeholder.com/300x150.png?text=CAMERA',
-      },
-    ];
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
 
+class _HistoryScreenState extends State<HistoryScreen> {
+  List<Map<String, dynamic>> _transactions = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTransactionHistory();
+  }
+
+  Future<void> fetchTransactionHistory() async {
+    final userId = await AuthService.getUserId();
+    if (userId == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://10.0.2.2/admin_sewainaja/api/history.php?user_id=$userId',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _transactions = data.cast<Map<String, dynamic>>();
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Gagal memuat data');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false, // TAMBAHKAN INI
         title: const Text('Riwayat Penyewaan'),
-        centerTitle: true,
-        elevation: 0,
         backgroundColor: const Color(0xFF4A90E2),
+        centerTitle: true,
       ),
       backgroundColor: const Color(0xFFF0F7FF),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: transactions.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 16),
-        itemBuilder: (context, index) {
-          return _buildTransactionCard(context, transactions[index]);
-        },
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _transactions.isEmpty
+          ? const Center(child: Text('Belum ada riwayat penyewaan.'))
+          : ListView.builder(
+              itemCount: _transactions.length,
+              padding: const EdgeInsets.all(16),
+              itemBuilder: (context, index) =>
+                  _buildTransactionCard(_transactions[index]),
+            ),
     );
   }
 
-  Widget _buildTransactionCard(
-    BuildContext context,
-    Map<String, dynamic> transaction,
-  ) {
-    final start = transaction['startDate'] as DateTime;
-    final end = transaction['endDate'] as DateTime;
-    final now = DateTime.now();
-
+  Widget _buildTransactionCard(Map<String, dynamic> data) {
+    final start = DateTime.parse(data['start_date']);
+    final end = DateTime.parse(data['end_date']);
     final dateRange =
-        '${DateFormat('d MMM yyyy, HH:mm').format(start)} - ${DateFormat('d MMM yyyy, HH:mm').format(end)}';
-    final totalPrice = NumberFormat.currency(
-      locale: 'id',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    ).format(transaction['totalPrice']);
+        '${DateFormat('d MMM yyyy').format(start)} - ${DateFormat('d MMM yyyy').format(end)}';
+    final totalPrice = double.tryParse(data['total_price'].toString()) ?? 0;
 
-    final statusLabel = transaction['status'];
-    final statusColor = statusLabel.toLowerCase() == 'selesai'
+    final statusColor = data['status'] == 'selesai'
         ? Colors.green
-        : const Color(0xFFFFA000);
-    final bgColor = statusLabel.toLowerCase() == 'selesai'
+        : Colors.orange;
+    final bgColor = data['status'] == 'selesai'
         ? Colors.green.shade50
-        : const Color(0xFFFFF8E1);
-
-    String timeInfo = '';
-    Color timeColor = Colors.grey.shade700;
-    String pesanPengembalian = '';
-
-    if (statusLabel.toLowerCase() == 'disewa') {
-      if (now.isAfter(end)) {
-        timeInfo = 'Terlambat: ${now.difference(end).inDays} hari';
-        timeColor = Colors.red;
-        pesanPengembalian =
-            'Segera kembalikan produk untuk menghindari denda tambahan!';
-      } else {
-        final remaining = end.difference(now);
-        timeInfo = 'Sisa: ${remaining.inDays}d ${remaining.inHours % 24}j';
-        timeColor = Colors.blue;
-
-        final isSameDay =
-            now.year == end.year &&
-            now.month == end.month &&
-            now.day == end.day;
-        final batasJam5 = DateTime(end.year, end.month, end.day, 17, 0);
-
-        if (isSameDay) {
-          if (now.isBefore(batasJam5)) {
-            pesanPengembalian = 'Harap kembalikan hari ini sebelum pukul 17.00';
-          } else {
-            pesanPengembalian = 'Kembalikan besok sebelum pukul 09.00';
-          }
-        }
-      }
-    }
+        : Colors.orange.shade50;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(blurRadius: 6, color: Colors.grey.shade300)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: const BorderRadius.only(
@@ -130,13 +108,10 @@ class HistoryScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'ID: ${transaction['id']}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
+                Text('ID: ${data['id']}', style: const TextStyle(fontSize: 12)),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
+                    horizontal: 10,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
@@ -144,10 +119,10 @@ class HistoryScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    statusLabel.toUpperCase(),
+                    data['status'].toString().toUpperCase(),
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
                       color: statusColor,
+                      fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
                   ),
@@ -155,201 +130,52 @@ class HistoryScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(0),
-              topRight: Radius.circular(0),
-            ),
-            child: Image.network(
-              transaction['imageUrl'] ?? '',
-              width: double.infinity,
-              height: 140,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 140,
-                  color: Colors.grey.shade100,
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                        SizedBox(height: 8),
-                        Text(
-                          'Gambar tidak tersedia',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+          // Image
+          Image.network(
+            data['image'] ?? '',
+            height: 150,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              height: 150,
+              color: Colors.grey[200],
+              child: const Icon(Icons.broken_image, size: 40),
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transaction['productName'],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    height: 1.4,
-                  ),
+                  data['product_name'] ?? 'Nama Produk',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 12),
-
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        dateRange,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
+                    const Icon(Icons.calendar_today, size: 14),
+                    const SizedBox(width: 6),
+                    Text(dateRange, style: const TextStyle(fontSize: 13)),
                   ],
                 ),
-                const SizedBox(height: 8),
-
-                if (timeInfo.isNotEmpty)
-                  Row(
-                    children: [
-                      Icon(
-                        now.isAfter(end)
-                            ? Icons.warning_amber
-                            : Icons.access_time,
-                        size: 16,
-                        color: timeColor,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        timeInfo,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: timeColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 12),
-
+                const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Total Harga:',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      style: TextStyle(color: Colors.grey),
                     ),
                     Text(
-                      totalPrice,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                      NumberFormat.currency(
+                        locale: 'id',
+                        symbol: 'Rp ',
+                        decimalDigits: 0,
+                      ).format(totalPrice),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-
-                if (pesanPengembalian.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.notifications_active,
-                          color: Colors.orange.shade700,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            pesanPengembalian,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.orange.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 12),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () {
-                      final duration = end.difference(start).inDays;
-
-                      final productDetail = {
-                        'name': transaction['productName'],
-                        'image': transaction['imageUrl'],
-                        'price':
-                            'Rp ${NumberFormat('#,###').format(transaction['totalPrice'] / duration)}/hari',
-                      };
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => OwnerRentalDetailScreen(
-                            transactionId: transaction['id'],
-                            product: productDetail,
-                            startDate: start,
-                            endDate: end,
-                            totalPrice: transaction['totalPrice'],
-                            status: transaction['status'] == 'selesai'
-                                ? 'Selesai'
-                                : 'Sedang Berjalan',
-                            renterName: 'Nama Penyewa',
-                            renterPhone: '081234567890',
-                            renterAddress: 'Alamat Penyewa',
-                          ),
-                        ),
-                      );
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFE3F2FD),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(
-                          color: Color(0xFFBBDEFB),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: const Text(
-                      'Lihat Detail Transaksi',
-                      style: TextStyle(
-                        color: Color(0xFF1976D2),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
                 ),
               ],
             ),
