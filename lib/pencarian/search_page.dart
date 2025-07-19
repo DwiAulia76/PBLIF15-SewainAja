@@ -1,22 +1,22 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../produk/product_card.dart';
 import '../produk/product_detail_screen.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  final String? initialCategoryValue;
+  const SearchPage({super.key, this.initialCategoryValue});
 
   @override
   State<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends State<SearchPage>
-    with SingleTickerProviderStateMixin {
+class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  late TabController _tabController;
   bool _isLoading = false;
   String _errorMessage = '';
   Timer? _debounceTimer;
@@ -24,24 +24,45 @@ class _SearchPageState extends State<SearchPage>
   final List<Map<String, dynamic>> _categories = [
     {'name': 'Semua', 'icon': Icons.all_inclusive, 'value': ''},
     {
+      'name': 'Pesta & Acara',
+      'icon': Icons.celebration,
+      'value': 'Alat Pesta & Acara',
+    },
+    {
+      'name': 'Bayi & Anak',
+      'icon': Icons.child_friendly,
+      'value': 'Perlengkapan Bayi & Anak',
+    },
+    {
+      'name': 'Konstruksi',
+      'icon': Icons.construction,
+      'value': 'Alat Konstruksi & Perkakas',
+    },
+    {
+      'name': 'Outdoor',
+      'icon': Icons.terrain,
+      'value': 'Perlengkapan Outdoor & Camping',
+    },
+    {
       'name': 'Elektronik',
-      'icon': Icons.electrical_services,
-      'value': 'Elektronik',
+      'icon': Icons.devices_other,
+      'value': 'Elektronik Khusus',
     },
-    {'name': 'Fashion', 'icon': Icons.checkroom, 'value': 'Fashion'},
     {
-      'name': 'Alat Rumah Tangga',
-      'icon': Icons.home,
-      'value': 'Alat Rumah Tangga',
+      'name': 'Olahraga',
+      'icon': Icons.fitness_center,
+      'value': 'Peralatan Olahraga',
     },
-    {'name': 'Olahraga', 'icon': Icons.sports, 'value': 'Olahraga'},
-    {'name': 'Hobi', 'icon': Icons.music_note, 'value': 'Hobi'},
     {
-      'name': 'Kesehatan',
-      'icon': Icons.health_and_safety,
-      'value': 'Kesehatan',
+      'name': 'Perabot',
+      'icon': Icons.chair,
+      'value': 'Perabot Rumah Sementara',
     },
-    {'name': 'Otomotif', 'icon': Icons.directions_car, 'value': 'Otomotif'},
+    {
+      'name': 'Kebersihan',
+      'icon': Icons.cleaning_services,
+      'value': 'Alat Kebersihan & Perawatan',
+    },
   ];
 
   List<Map<String, dynamic>> _searchResults = [];
@@ -50,14 +71,20 @@ class _SearchPageState extends State<SearchPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _categories.length, vsync: this);
-    _fetchProducts();
+    if (widget.initialCategoryValue != null) {
+      final index = _categories.indexWhere(
+        (cat) => cat['value'] == widget.initialCategoryValue,
+      );
+      if (index != -1) {
+        _selectedCategoryIndex = index;
+      }
+    }
+    _fetchProducts(category: _categories[_selectedCategoryIndex]['value']);
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _tabController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -85,10 +112,7 @@ class _SearchPageState extends State<SearchPage>
     });
 
     try {
-      final queryParams = {
-        'keyword': keyword,
-        'category': category == 'Semua' ? '' : category,
-      };
+      final queryParams = {'keyword': keyword, 'category': category};
 
       final url = Uri.http(
         '10.0.2.2',
@@ -153,14 +177,64 @@ class _SearchPageState extends State<SearchPage>
   }
 
   Widget _buildSearchResults() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Mencari produk...',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (_errorMessage.isNotEmpty) {
-      return Center(child: Text(_errorMessage));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.red),
+            ),
+          ],
+        ),
+      );
     }
 
     if (_searchResults.isEmpty) {
-      return const Center(child: Text("Tidak ditemukan produk."));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              "Tidak ditemukan produk",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Coba kata kunci atau kategori berbeda",
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
     }
 
     return GridView.builder(
@@ -178,7 +252,7 @@ class _SearchPageState extends State<SearchPage>
         final isAvailable = status == 'tersedia' || status == 'available';
 
         return Opacity(
-          opacity: isAvailable ? 1.0 : 0.4, // Disewa = abu-abu
+          opacity: isAvailable ? 1.0 : 0.5,
           child: AbsorbPointer(
             absorbing: !isAvailable,
             child: ProductCard(
@@ -194,12 +268,20 @@ class _SearchPageState extends State<SearchPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Container(
-          height: 40,
+          height: 42,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: TextField(
             controller: _searchController,
@@ -207,11 +289,12 @@ class _SearchPageState extends State<SearchPage>
             autofocus: true,
             decoration: InputDecoration(
               hintText: 'Cari barang...',
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              hintStyle: TextStyle(color: Colors.grey[500]),
+              prefixIcon: Icon(Icons.search, color: Colors.blue[700]),
               border: InputBorder.none,
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear, color: Colors.grey),
+                      icon: Icon(Icons.clear, color: Colors.grey[500]),
                       onPressed: () {
                         _searchController.clear();
                         _performSearch('');
@@ -219,36 +302,75 @@ class _SearchPageState extends State<SearchPage>
                     )
                   : null,
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              filled: true,
+              fillColor: Colors.white,
             ),
-            style: const TextStyle(fontSize: 16),
+            style: TextStyle(fontSize: 16, color: Colors.grey[800]),
             onChanged: _onSearchChanged,
           ),
         ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: IconThemeData(color: Colors.blue[700]),
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
       body: Column(
         children: [
+          // Category Filter Chips
           Container(
             color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              indicatorColor: Colors.blue,
-              labelColor: Colors.blue,
-              unselectedLabelColor: Colors.grey,
-              tabs: _categories.map((c) {
-                return Tab(
-                  child: Row(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            height: 60,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: _categories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final isSelected = _selectedCategoryIndex == index;
+                return ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(c['icon'] as IconData, size: 18),
+                      Icon(
+                        _categories[index]['icon'],
+                        size: 18,
+                        color: isSelected ? Colors.white : Colors.blue[700],
+                      ),
                       const SizedBox(width: 6),
-                      Text(c['name'] as String),
+                      Text(
+                        _categories[index]['name'],
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.blue[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      _filterByCategory(index);
+                    }
+                  },
+                  backgroundColor: Colors.white,
+                  selectedColor: Colors.blue[700],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: isSelected ? Colors.blue[700]! : Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 );
-              }).toList(),
-              onTap: _filterByCategory,
+              },
             ),
           ),
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
           Expanded(child: _buildSearchResults()),
         ],
       ),

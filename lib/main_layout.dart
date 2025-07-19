@@ -3,6 +3,7 @@ import 'package:sewainaja/home/home.dart';
 import 'package:sewainaja/history/history_screen.dart';
 import 'package:sewainaja/widgets/custom_navbar.dart';
 import 'package:sewainaja/profil/profil.dart';
+import 'package:sewainaja/notification/notification_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -15,13 +16,13 @@ class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const HomePage(), // Index 0
-    const HistoryScreen(), // Index 1
-    const CartPage(), // Index 2
-    const ProfileScreen(), // Index 3
+    const HomePage(),
+    const HistoryScreen(),
+    const LoanCalendarPage(),
+    const ProfileScreen(),
   ];
 
-  void _onItemTapped(int index) {
+  void _onTabSelected(int index) {
     setState(() {
       _selectedIndex = index;
     });
@@ -30,21 +31,11 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // HAPUS Scaffold di ProfileScreen jika ada
       body: _pages[_selectedIndex],
       bottomNavigationBar: CustomNavBar(
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: _onTabSelected,
       ),
     );
-  }
-}
-
-class CartPage extends StatelessWidget {
-  const CartPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Cart Page'));
   }
 }

@@ -1,3 +1,4 @@
+// file: custom_navbar.dart
 import 'package:flutter/material.dart';
 
 class CustomNavBar extends StatelessWidget {
@@ -27,7 +28,7 @@ class CustomNavBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: BottomNavigationBar(
           currentIndex: currentIndex,
-          onTap: onTap, // Pastikan ini terhubung dengan benar
+          onTap: onTap,
           backgroundColor: Colors.transparent,
           elevation: 0,
           selectedItemColor: Colors.blue[700],
@@ -45,16 +46,12 @@ class CustomNavBar extends StatelessWidget {
             _buildNavItem(1, Icons.history_outlined, Icons.history, 'History'),
             _buildNavItem(
               2,
-              Icons.shopping_cart_outlined,
-              Icons.shopping_cart,
-              'Cart',
+              Icons.notifications_outlined,
+              Icons.notifications,
+              'Notifikasi',
             ),
-            _buildNavItem(
-              3,
-              Icons.person_outlined,
-              Icons.person,
-              'Profile',
-            ), // Indeks 3 untuk profil
+
+            _buildNavItem(3, Icons.person_outlined, Icons.person, 'Profile'),
           ],
         ),
       ),

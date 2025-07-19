@@ -70,9 +70,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final status = _productDetail['status']?.toString().toLowerCase();
     final isAvailable = status == 'tersedia' || status == 'available';
+
+    // Ubah bagian gambar
     final List<String> images = [];
-    if (_productDetail['image'] != null) {
-      images.add(_productDetail['image']);
+    if (_productDetail['image_url'] != null) {
+      images.add('http://10.0.2.2' + _productDetail['image_url']);
     }
 
     if (_isLoading) {
@@ -217,7 +219,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _productDetail['price']?.toString() ?? 'Rp -',
+                  _productDetail['price_per_day']?.toString() ?? 'Rp -',
                   style: const TextStyle(
                     fontSize: 20,
                     color: Colors.blue,
@@ -266,15 +268,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _buildBottomButtons(bool isAvailable) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 36),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
       ),
       child: Row(
         children: [
@@ -305,9 +301,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () {
-                // Aksi chat admin
-              },
+              onPressed: () {},
               icon: const Icon(Icons.chat, size: 20),
               label: const Text('Chat Admin', style: TextStyle(fontSize: 14)),
               style: OutlinedButton.styleFrom(

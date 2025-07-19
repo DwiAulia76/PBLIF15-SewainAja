@@ -7,6 +7,7 @@ class ProductCard extends StatelessWidget {
 
   const ProductCard({super.key, required this.product, required this.onTap});
 
+  // Fungsi untuk menentukan label status
   String getStatusLabel(String status) {
     final normalized = status.toLowerCase();
     if (normalized == 'available' || normalized == 'tersedia') {
@@ -18,6 +19,7 @@ class ProductCard extends StatelessWidget {
     }
   }
 
+  // Fungsi untuk menentukan warna status
   Color getStatusColor(String status) {
     final normalized = status.toLowerCase();
     if (normalized == 'available' || normalized == 'tersedia') {
@@ -32,138 +34,177 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
-    final isRented = (product['status']?.toLowerCase() == 'rented');
+    final isRented = (product['status']?.toString().toLowerCase() == 'rented');
 
-    // FORMAT HARGA
-    final int price = int.tryParse(product['price_per_day'].toString()) ?? 0;
-    final String formattedPrice = NumberFormat.currency(
+    // Format harga menjadi Rp 100.000
+    final price = double.tryParse(product['price_per_day'].toString()) ?? 0;
+    final formattedPrice = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
       decimalDigits: 0,
     ).format(price);
 
+    // Ambil path gambar dari data produk
+    final imagePath = product['image']?.toString() ?? '';
+
+    // Bangun URL lengkap untuk gambar
+    final baseUrl = 'http://10.0.2.2/admin_sewainaja/';
+    final imageUrl = imagePath.isNotEmpty ? '$baseUrl$imagePath' : null;
+
     return GestureDetector(
       onTap: isRented ? null : onTap,
-      child: Opacity(
-        opacity: isRented ? 0.4 : 1.0,
-        child: Container(
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[900] : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Gambar produk
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: AspectRatio(
-                      aspectRatio: 1.2,
-                      child:
-                          product['image'] != null &&
-                              product['image'].toString().isNotEmpty
-                          ? Image.network(
-                              product['image'],
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildPlaceholder(),
-                            )
-                          : _buildPlaceholder(),
-                    ),
-                  ),
-                  // Info Produk
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product['name'] ?? 'Nama Produk',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$formattedPrice / hari',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: Colors.blue.shade700,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          product['category']?.toString().toLowerCase() ??
-                              'kategori',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // Badge Status
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Bagian Gambar Produk
+            Stack(
+              children: [
+                Container(
+                  height: 140,
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    color: getStatusColor(product['status'] ?? ''),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                    color: Colors.grey[200],
                   ),
-                  child: Text(
-                    getStatusLabel(product['status'] ?? ''),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                      letterSpacing: 0.5,
+                  child: imageUrl != null
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          // Menampilkan loading indicator saat gambar dimuat
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            );
+                          },
+                          // Menampilkan placeholder jika gambar error
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.error, color: Colors.red),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    'Gagal memuat gambar',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        )
+                      : Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.image,
+                                color: Colors.grey[400],
+                                size: 40,
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                'Tidak ada gambar',
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                ),
+
+                // Badge Status (tersedia/disewa)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: getStatusColor(
+                        product['status']?.toString() ?? '',
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      getStatusLabel(product['status']?.toString() ?? ''),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+              ],
+            ),
 
-  Widget _buildPlaceholder() {
-    return Container(
-      color: Colors.grey[200],
-      child: const Center(
-        child: Icon(Icons.image, color: Colors.grey, size: 40),
+            // Bagian Informasi Produk
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    product['name']?.toString() ?? 'Nama Produk',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    formattedPrice,
+                    style: TextStyle(
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    product['category']?.toString() ?? 'Kategori',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
