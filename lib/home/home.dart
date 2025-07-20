@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../pencarian/search_page.dart';
 import '../produk/product_detail_screen.dart'; // Import untuk ProductDetailScreen
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -50,6 +51,18 @@ class _HomePageState extends State<HomePage> {
       'value': 'Alat Kebersihan & Perawatan',
     },
   ];
+
+  String formatRupiah(dynamic value) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    if (value is String) {
+      value = double.tryParse(value) ?? 0;
+    }
+    return formatter.format(value);
+  }
 
   List<Map<String, dynamic>> _recommendedProducts = [];
   bool _isLoading = true;
@@ -371,9 +384,12 @@ class _HomePageState extends State<HomePage> {
                   height: 140,
                   width: double.infinity,
                   color: Colors.grey[100],
-                  child: item['photo'] != null && item['photo'].isNotEmpty
+                  child:
+                      item['image_url'] != null &&
+                          item['image_url'].toString().isNotEmpty
                       ? Image.network(
-                          item['photo'],
+                          item['image_url'],
+
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return _buildImageErrorPlaceholder();
@@ -404,7 +420,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Rp ${item['price_per_day'] ?? '0'} / hari',
+                        '${formatRupiah(item['price_per_day'])} / hari',
                         style: TextStyle(
                           color: Colors.blue[700],
                           fontWeight: FontWeight.w700,

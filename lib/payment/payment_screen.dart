@@ -45,6 +45,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
     } on PlatformException catch (e) {
       _showError('Gagal memilih gambar: ${e.message}');
+    } catch (e) {
+      _showError('Terjadi kesalahan: $e');
     }
   }
 
@@ -111,6 +113,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       decimalDigits: 0,
     );
 
+    // PERBAIKAN 1: Base URL yang benar untuk gambar produk
+    const String baseImageUrl = 'http://10.0.2.2/admin_sewainaja/';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pembayaran'),
@@ -123,7 +128,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildProductCard(),
+            _buildProductCard(formatter, baseImageUrl),
             const SizedBox(height: 20),
             _buildPaymentDetail(days, formatter),
             const SizedBox(height: 20),
@@ -138,26 +143,61 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildProductCard() {
+  Widget _buildProductCard(NumberFormat formatter, String baseImageUrl) {
+    // Format harga per hari
+    final price = widget.product['price_per_day'] ?? widget.product['price'];
+    final formattedPrice = formatter.format(
+      double.tryParse(price.toString()) ?? 0,
+    );
+
+    // PERBAIKAN 2: Pembentukan URL gambar yang benar
+    String imagePath = widget.product['image'] ?? '';
+    String imageUrl = '';
+
+    if (imagePath.isNotEmpty) {
+      // Hapus karakter '/' di awal path jika ada
+      if (imagePath.startsWith('/')) {
+        imagePath = imagePath.substring(1);
+      }
+      imageUrl = baseImageUrl + imagePath;
+    }
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                widget.product['image'] ?? '',
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 80,
-                  height: 80,
-                  color: _lightBlue,
-                  child: Icon(Icons.image, color: _primaryColor),
-                ),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: _lightBlue,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded /
+                                        progress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) =>
+                            _buildImageError(imageUrl),
+                      )
+                    : _buildImageError('Tidak ada gambar'),
               ),
             ),
             const SizedBox(width: 16),
@@ -174,7 +214,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Rp ${widget.product['price_per_day'] ?? widget.product['price']}/hari',
+                    '$formattedPrice/hari',
                     style: TextStyle(
                       color: _primaryColor,
                       fontWeight: FontWeight.w600,
@@ -194,7 +234,35 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
+  Widget _buildImageError(String error) {
+    return Container(
+      color: _lightBlue,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.broken_image, color: _primaryColor),
+          const SizedBox(height: 4),
+          Text(
+            'Gagal memuat gambar',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10, color: Colors.red),
+          ),
+          Text(
+            error.length > 20 ? '${error.substring(0, 20)}...' : error,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 8, color: Colors.red),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPaymentDetail(int days, NumberFormat formatter) {
+    // Format harga per hari
+    final price = widget.product['price_per_day'] ?? widget.product['price'];
+    final dailyPrice = double.tryParse(price.toString()) ?? 0;
+    final formattedDailyPrice = formatter.format(dailyPrice);
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -204,10 +272,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           children: [
             Text('Rincian Pembayaran', style: _sectionTitleStyle()),
             const SizedBox(height: 16),
-            _buildPriceRow(
-              'Harga Sewa',
-              'Rp ${widget.product['price_per_day'] ?? widget.product['price']}/hari',
-            ),
+            _buildPriceRow('Harga Sewa', '$formattedDailyPrice/hari'),
             _buildPriceRow('Durasi Sewa', '$days hari'),
             Divider(color: Colors.grey[300]),
             _buildPriceRow(

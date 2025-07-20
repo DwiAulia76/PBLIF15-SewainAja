@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:url_launcher/url_launcher.dart'; // pastikan import ini ada
+import 'package:intl/intl.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -18,10 +20,50 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   String _errorMessage = '';
   int _currentPage = 0;
 
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp',
+    decimalDigits: 0,
+  );
+
+  String formatRupiah(dynamic value) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    if (value is String) {
+      value = double.tryParse(value) ?? 0;
+    }
+    return formatter.format(value);
+  }
+
   @override
   void initState() {
     super.initState();
     _fetchProductDetail();
+  }
+
+  void _openWhatsAppAdmin() async {
+    final waLink = _productDetail['whatsapp_admin'];
+    if (waLink != null && waLink.toString().isNotEmpty) {
+      final Uri uri = Uri.parse(waLink);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak bisa membuka WhatsApp')),
+          );
+        }
+      }
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Link WhatsApp tidak tersedia')),
+        );
+      }
+    }
   }
 
   Future<void> _fetchProductDetail() async {
@@ -73,8 +115,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     // Ubah bagian gambar
     final List<String> images = [];
-    if (_productDetail['image_url'] != null) {
-      images.add('http://10.0.2.2' + _productDetail['image_url']);
+    if (_productDetail['image_url'] != null &&
+        _productDetail['image_url'].toString().isNotEmpty) {
+      images.add(_productDetail['image_url']);
     }
 
     if (_isLoading) {
@@ -130,8 +173,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     });
                   },
                   itemBuilder: (context, index) {
+                    final imageUrl = images[index];
                     return Image.network(
-                      images[index],
+                      imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
@@ -219,13 +263,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _productDetail['price_per_day']?.toString() ?? 'Rp -',
+                  _productDetail.containsKey('price_per_day') &&
+                          _productDetail['price_per_day'].toString().isNotEmpty
+                      ? '${currencyFormatter.format(double.tryParse(_productDetail['price_per_day'].toString()) ?? 0)} / hari'
+                      : 'Rp 0 / hari',
                   style: const TextStyle(
                     fontSize: 20,
                     color: Colors.blue,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -301,7 +349,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: () => _openWhatsAppAdmin(),
+
               icon: const Icon(Icons.chat, size: 20),
               label: const Text('Chat Admin', style: TextStyle(fontSize: 14)),
               style: OutlinedButton.styleFrom(

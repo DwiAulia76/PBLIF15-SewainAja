@@ -24,6 +24,8 @@ class SuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final duration = endDate.difference(startDate);
     final days = duration.inDays;
+    // Base URL untuk gambar produk - SAMA DENGAN DI PAYMENT SCREEN
+    const String baseImageUrl = 'http://10.0.2.2/admin_sewainaja/';
 
     return Scaffold(
       appBar: AppBar(
@@ -54,7 +56,7 @@ class SuccessScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
             const SizedBox(height: 32),
-            _buildProductCard(days),
+            _buildProductCard(days, baseImageUrl),
             const SizedBox(height: 24),
             _buildDetailCard(),
             const SizedBox(height: 32),
@@ -67,7 +69,19 @@ class SuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCard(int days) {
+  Widget _buildProductCard(int days, String baseImageUrl) {
+    // PERBAIKAN: Bangun URL gambar dengan benar
+    String imagePath = product['image'] ?? '';
+    String imageUrl = '';
+
+    if (imagePath.isNotEmpty) {
+      // Hapus karakter '/' di awal path jika ada
+      if (imagePath.startsWith('/')) {
+        imagePath = imagePath.substring(1);
+      }
+      imageUrl = baseImageUrl + imagePath;
+    }
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -77,20 +91,46 @@ class SuccessScreen extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                product['image'] ?? '',
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.image, color: Colors.grey),
-                  );
-                },
-              ),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.broken_image,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
+                    )
+                  : Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.image, color: Colors.grey),
+                    ),
             ),
             const SizedBox(width: 16),
             Expanded(

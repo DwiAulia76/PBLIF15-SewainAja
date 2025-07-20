@@ -10,6 +10,7 @@ import 'rental/rental_process_screen.dart';
 import 'rental/confirmation_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
+  '/': (context) => const StartedPage(),
   '/started': (context) => const StartedPage(),
   '/auth/login': (context) => const auth.LoginPage(),
   '/auth/daftar': (context) => const DaftarPage(),
@@ -20,7 +21,6 @@ final Map<String, WidgetBuilder> appRoutes = {
     return PhoneAddressVerificationPage(userId: args);
   },
 
-  // Perbaikan: Pastikan tidak ada koma ekstra
   '/auth/daftar/otp-verification': (context) {
     final args =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;

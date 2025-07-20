@@ -40,6 +40,19 @@ class OwnerRentalDetailScreen extends StatelessWidget {
     final actualRenterAddress =
         renterAddress ?? 'Jl. Merdeka No. 123, Jakarta Pusat';
 
+    // Base URL untuk gambar produk
+    const String baseImageUrl = 'http://10.0.2.2/admin_sewainaja/';
+
+    // Bangun URL gambar produk
+    String imagePath = product['image'] ?? '';
+    String imageUrl = '';
+    if (imagePath.isNotEmpty) {
+      if (imagePath.startsWith('/')) {
+        imagePath = imagePath.substring(1);
+      }
+      imageUrl = baseImageUrl + imagePath;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Penyewaan'),
@@ -82,19 +95,49 @@ class OwnerRentalDetailScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        product['image'] ?? '',
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 80,
-                          height: 80,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.image, color: Colors.grey),
-                        ),
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[200],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: imageUrl.isNotEmpty
+                            ? Image.network(
+                                imageUrl,
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value:
+                                              loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                              : null,
+                                        ),
+                                      );
+                                    },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: const Icon(
+                                      Icons.broken_image,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              )
+                            : const Icon(Icons.image, color: Colors.grey),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -111,7 +154,7 @@ class OwnerRentalDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            product['price'] ?? '',
+                            'Rp${NumberFormat('#,###').format(double.tryParse(product['price'].toString()) ?? 0)}/hari',
                             style: const TextStyle(
                               fontSize: 14,
                               color: Colors.blue,

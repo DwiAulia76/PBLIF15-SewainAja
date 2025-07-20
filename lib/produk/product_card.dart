@@ -186,13 +186,14 @@ class ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    formattedPrice,
+                    '$formattedPrice / hari',
                     style: TextStyle(
                       color: Colors.blue[700],
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                   ),
+
                   const SizedBox(height: 6),
                   Text(
                     product['category']?.toString() ?? 'Kategori',
